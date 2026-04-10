@@ -9,13 +9,16 @@ package.name = vectakasir
 # (str) Package domain (needs to be unique)
 package.domain = org.vecta.kasir
 
+# (str) Version code (Wajib diisi!)
+version = 0.1
+
 # (str) Source code where the main.py live
 source.dir = .
 
 # (list) Source files to include/ignore
 source.include_exts = py,png,jpg,kv,atlas
 
-# (list) Requirements (stabil dengan versi ini)
+# (list) Requirements
 requirements = python3,kivy
 
 # (str) Supported orientation
@@ -50,7 +53,7 @@ warnings = True
 
 [buildozer]
 
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+# (int) Log level
 log_level = 2
 
 # (bool) Show warnings
