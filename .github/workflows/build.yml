@@ -1,4 +1,4 @@
-name: Build APK with Buildozer (Stable)
+name: Build APK with Buildozer (Final)
 
 on:
   push:
@@ -17,7 +17,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build APK
-        run: buildozer -v android debug
+        run: |
+          export YES=1
+          buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
