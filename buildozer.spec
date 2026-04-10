@@ -1,23 +1,57 @@
 [app]
 
+# (str) Title of your application
 title = Vecta Kasir
+
+# (str) Package name
 package.name = vectakasir
-package.domain = com.vecta.kasir
 
+# (str) Package domain (needs to be unique)
+package.domain = org.vecta.kasir
+
+# (str) Source code where the main.py live
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,db
 
-version = 0.1
-requirements = python3,kivy,android,sqlite3
+# (list) Source files to include/ignore
+source.include_exts = py,png,jpg,kv,atlas
 
+# (list) Requirements (stabil dengan versi ini)
+requirements = python3==3.11.10,kivy==2.2.1
+
+# (str) Supported orientation
 orientation = portrait
 
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-android.api = 30
+# (list) Android permissions
+android.permissions = INTERNET
+
+# (int) Android API to use (SDK version)
+android.api = 33
+
+# (int) Minimum API version
 android.minapi = 21
-android.ndk = 23b
+
+# (str) Android NDK version to use
+android.ndk = 25b
+
+# (str) Android SDK version to use
+android.sdk = 33
+
+# (str) Android architecture
 android.arch = arm64-v8a
+
+# (bool) Automatically accept SDK license
 android.accept_sdk_license = True
 
+# (str) Log level
 log_level = 2
-warnings = 1
+
+# (bool) Show warnings
+warnings = True
+
+[buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
+
+# (bool) Show warnings
+warnings = True
