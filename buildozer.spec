@@ -1,60 +1,45 @@
-[app]
+name: Build APK with Kivy
 
-# (str) Title of your application
-title = Vecta Kasir
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-# (str) Package name
-package.name = vectakasir
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
 
-# (str) Package domain (needs to be unique)
-package.domain = org.vecta.kasir
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-# (str) Version code (Wajib diisi!)
-version = 0.1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-# (str) Source code where the main.py live
-source.dir = .
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
 
-# (list) Source files to include/ignore
-source.include_exts = py,png,jpg,kv,atlas
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install cython==0.29.36
+          pip install buildozer==1.5.0
 
-# (list) Requirements
-requirements = python3,kivy
+      - name: Fix buildozer.spec
+        run: |
+          sed -i 's/ndk = .*/ndk = 23c/' buildozer.spec
+          sed -i 's/sdk = .*/sdk = 30/' buildozer.spec
 
-# (str) Supported orientation
-orientation = portrait
+      - name: Build with Buildozer
+        run: buildozer -v android debug
 
-# (list) Android permissions
-android.permissions = INTERNET
-
-# (int) Android API to use (SDK version)
-android.api = 33
-
-# (int) Minimum API version
-android.minapi = 21
-
-# (str) Android NDK version to use
-android.ndk = 25b
-
-# (str) Android SDK version to use
-android.sdk = 33
-
-# (str) Android architecture
-android.arch = arm64-v8a
-
-# (bool) Automatically accept SDK license
-android.accept_sdk_license = True
-
-# (str) Log level
-log_level = 2
-
-# (bool) Show warnings
-warnings = True
-
-[buildozer]
-
-# (int) Log level
-log_level = 2
-
-# (bool) Show warnings
-warnings = True
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vecta-Kasir-APK
+          path: bin/*.apk
