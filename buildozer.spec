@@ -16,7 +16,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
 # (list) Requirements (stabil dengan versi ini)
-requirements = python3==3.11.10,kivy==2.2.1
+requirements = python3,kivy
 
 # (str) Supported orientation
 orientation = portrait
