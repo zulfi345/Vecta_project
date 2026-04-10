@@ -2,50 +2,60 @@ name: Build APK with Kivy
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Batasi waktu build maksimal 45 menit
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git zip unzip openjdk-17-jdk \
-          autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-          libffi-dev libssl-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            autoconf \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake \
+            libffi-dev \
+            libssl-dev
 
-    - name: Install Python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install Cython==0.29.33
-        pip install buildozer
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install Cython==0.29.33
+          pip install buildozer
 
-    - name: Build with Buildozer
-      run: |
-        buildozer init
-        buildozer -v android debug
-      env:
-        # Set alokasi memori untuk proses build
-        BUILD_NPROC: 2
-        BUILD_MEMORY: 2048
+      - name: Clean previous build
+        run: |
+          rm -rf .buildozer
+          rm -rf bin
 
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Vecta-Kasir-HelloWorld
-        path: bin/*.apk
+      - name: Build with Buildozer
+        run: |
+          buildozer init
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vecta-Kasir-APK
+          path: bin/*.apk
