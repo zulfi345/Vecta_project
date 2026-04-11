@@ -6,18 +6,22 @@ package.domain = org.test
 source.dir = .
 source.include_exts = py,png,jpg,kv
 
-version = 0.1
+# 🔥 NAIKKAN VERSION (biar bisa update APK)
+version = 0.2
 
-requirements = python3,kivy
+# 🔥 TAMBAH PLYER
+requirements = python3,kivy,plyer
 
 orientation = portrait
 
-# 🔥 FIX ANDROID
+# 🔥 ANDROID STABLE
 android.api = 33
 android.minapi = 21
-android.sdk = 33
 android.ndk = 25b
 android.build_tools = 33.0.2
 
-# icon (optional)
-icon.filename = Icon.png
+# 🔥 PERMISSION STORAGE
+android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+
+# 🔥 ICON (WAJIB SESUAI NAMA FILE)
+icon.filename = icon.png
