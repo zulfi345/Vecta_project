@@ -19,7 +19,7 @@ jobs:
       - name: 🧹 Clean build
         run: |
           rm -rf .buildozer
-          buildozer android clean
+          yes | buildozer android clean
 
       - name: 🚀 Build APK
         run: |
