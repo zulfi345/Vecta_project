@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv
 version = 0.2
 
 # library
-requirements = python3,kivy==2.1.0
+requirements = python3==3.10.11,kivy==2.1.0,cython==0.29.33
 
 orientation = portrait
 
@@ -22,7 +22,7 @@ android.build_tools = 33.0.2
 p4a.branch = stable
 
 # 🔥 PERMISSION LENGKAP (FIX GALERI)
-android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
+android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 
 # 🔥 FIX AKSES FILE ANDROID 11+
 android.enable_androidx = True
