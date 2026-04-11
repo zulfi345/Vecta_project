@@ -3,14 +3,13 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
-from kivy.uix.popup import Popup
 from plyer import filechooser
 
-# 🔥 TAMBAHAN (PENTING)
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 
 import sqlite3
 import shutil
@@ -43,11 +42,15 @@ class HomeScreen(Screen):
     pass
 
 class ProdukScreen(Screen):
+    total = 0
+
     def on_enter(self):
         self.load_produk()
 
     def load_produk(self):
         self.ids.produk_list.clear_widgets()
+        self.total = 0
+        self.update_total()
 
         conn = sqlite3.connect('produk.db')
         c = conn.cursor()
@@ -59,32 +62,52 @@ class ProdukScreen(Screen):
 
             box = BoxLayout(size_hint_y=None, height=120, spacing=10)
 
-            # gambar
             img = Image(source=gambar if gambar else "")
             box.add_widget(img)
 
-            # info
             info = BoxLayout(orientation='vertical')
             info.add_widget(Label(text=nama))
             info.add_widget(Label(text=f"Rp {harga}"))
             box.add_widget(info)
 
-            # tombol
-            box.add_widget(Button(text="+"))
-            box.add_widget(Button(text="-"))
+            qty_input = TextInput(text='0', size_hint_x=0.3)
+
+            def tambah(instance, harga=harga, qty_input=qty_input):
+                val = int(qty_input.text)
+                val += 1
+                qty_input.text = str(val)
+                self.total += harga
+                self.update_total()
+
+            def kurang(instance, harga=harga, qty_input=qty_input):
+                val = int(qty_input.text)
+                if val > 0:
+                    val -= 1
+                    qty_input.text = str(val)
+                    self.total -= harga
+                    self.update_total()
+
+            box.add_widget(Button(text='-', on_press=kurang))
+            box.add_widget(qty_input)
+            box.add_widget(Button(text='+', on_press=tambah))
 
             self.ids.produk_list.add_widget(box)
 
+    def update_total(self):
+        self.ids.total_label.text = f"Total: Rp {self.total}"
+
+    # ================= TAMBAH PRODUK =================
     def pilih_gambar(self):
         filechooser.open_file(on_selection=self.set_gambar)
 
     def set_gambar(self, selection):
         if selection:
             path = selection[0]
+            filename = os.path.basename(path)
+            new_path = os.path.join('.', filename)
 
-            # 🔥 copy ke folder project
-            new_path = os.path.join('.', os.path.basename(path))
-            shutil.copy(path, new_path)
+            if not os.path.exists(new_path):
+                shutil.copy(path, new_path)
 
             self.ids.img_preview.source = new_path
             self.selected_image = new_path
@@ -94,18 +117,19 @@ class ProdukScreen(Screen):
         harga = self.ids.input_harga.text
         gambar = getattr(self, 'selected_image', '')
 
-        # 🔥 VALIDASI
         if not nama or not harga:
+            return
+
+        if not harga.isdigit():
             return
 
         conn = sqlite3.connect('produk.db')
         c = conn.cursor()
         c.execute("INSERT INTO produk (nama,harga,gambar) VALUES (?,?,?)",
-                  (nama, harga, gambar))
+                  (nama, int(harga), gambar))
         conn.commit()
         conn.close()
 
-        # reset input
         self.ids.input_nama.text = ''
         self.ids.input_harga.text = ''
         self.ids.img_preview.source = ''
@@ -124,7 +148,6 @@ ScreenManager:
     name: 'splash'
     BoxLayout:
         orientation: 'vertical'
-        spacing: 20
 
         Image:
             source: 'logo.png'
@@ -146,7 +169,6 @@ ScreenManager:
 
             Button:
                 text: 'Home'
-                on_press: app.root.current = 'home'
             Button:
                 text: 'Produk'
                 on_press: app.root.current = 'produk'
@@ -182,13 +204,19 @@ ScreenManager:
             text: 'Tambah Produk'
             on_press: root.tambah_produk()
 
-        # LIST
+        # LIST PRODUK
         ScrollView:
             BoxLayout:
                 id: produk_list
                 orientation: 'vertical'
                 size_hint_y: None
                 height: self.minimum_height
+
+        # TOTAL
+        Label:
+            id: total_label
+            text: 'Total: Rp 0'
+            size_hint_y: 0.1
 
         # MENU
         BoxLayout:
