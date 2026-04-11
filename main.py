@@ -5,7 +5,16 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
 from kivy.uix.popup import Popup
 from plyer import filechooser
+
+# 🔥 TAMBAHAN (PENTING)
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.image import Image
+from kivy.uix.button import Button
+
 import sqlite3
+import shutil
+import os
 
 # ================= DATABASE =================
 def init_db():
@@ -48,42 +57,46 @@ class ProdukScreen(Screen):
         for item in data:
             nama, harga, gambar = item[1], item[2], item[3]
 
-            self.ids.produk_list.add_widget(
-                Builder.load_string(f'''
-BoxLayout:
-    size_hint_y: None
-    height: 120
-    spacing: 10
+            box = BoxLayout(size_hint_y=None, height=120, spacing=10)
 
-    Image:
-        source: '{gambar if gambar else ""}'
+            # gambar
+            img = Image(source=gambar if gambar else "")
+            box.add_widget(img)
 
-    BoxLayout:
-        orientation: 'vertical'
+            # info
+            info = BoxLayout(orientation='vertical')
+            info.add_widget(Label(text=nama))
+            info.add_widget(Label(text=f"Rp {harga}"))
+            box.add_widget(info)
 
-        Label:
-            text: '{nama}'
-        Label:
-            text: 'Rp {harga}'
+            # tombol
+            box.add_widget(Button(text="+"))
+            box.add_widget(Button(text="-"))
 
-    Button:
-        text: '+'
-    Button:
-        text: '-'
-'''))
+            self.ids.produk_list.add_widget(box)
 
     def pilih_gambar(self):
         filechooser.open_file(on_selection=self.set_gambar)
 
     def set_gambar(self, selection):
         if selection:
-            self.ids.img_preview.source = selection[0]
-            self.selected_image = selection[0]
+            path = selection[0]
+
+            # 🔥 copy ke folder project
+            new_path = os.path.join('.', os.path.basename(path))
+            shutil.copy(path, new_path)
+
+            self.ids.img_preview.source = new_path
+            self.selected_image = new_path
 
     def tambah_produk(self):
         nama = self.ids.input_nama.text
         harga = self.ids.input_harga.text
         gambar = getattr(self, 'selected_image', '')
+
+        # 🔥 VALIDASI
+        if not nama or not harga:
+            return
 
         conn = sqlite3.connect('produk.db')
         c = conn.cursor()
@@ -91,6 +104,12 @@ BoxLayout:
                   (nama, harga, gambar))
         conn.commit()
         conn.close()
+
+        # reset input
+        self.ids.input_nama.text = ''
+        self.ids.input_harga.text = ''
+        self.ids.img_preview.source = ''
+        self.selected_image = ''
 
         self.load_produk()
 
@@ -142,7 +161,7 @@ ScreenManager:
     BoxLayout:
         orientation: 'vertical'
 
-        # === INPUT PRODUK ===
+        # INPUT
         TextInput:
             id: input_nama
             hint_text: 'Nama Produk'
@@ -163,7 +182,7 @@ ScreenManager:
             text: 'Tambah Produk'
             on_press: root.tambah_produk()
 
-        # === LIST PRODUK ===
+        # LIST
         ScrollView:
             BoxLayout:
                 id: produk_list
@@ -171,7 +190,7 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
 
-        # === MENU BAWAH ===
+        # MENU
         BoxLayout:
             size_hint_y: 0.1
 
