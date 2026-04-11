@@ -1,4 +1,4 @@
-name: Build APK (Stable)
+name: Build APK (FIX FINAL)
 
 on:
   push:
@@ -33,6 +33,31 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
+      # 🔥 INIT dulu biar SDK ke-download
+      - name: Init buildozer
+        run: |
+          buildozer android debug || true
+
+      # 🔥 FIX CONFIG ANDROID
+      - name: Fix Android config
+        run: |
+          mkdir -p ~/.android
+          echo "count=0" > ~/.android/repositories.cfg
+
+      # 🔥 ACCEPT LICENSE (INI YANG KAMU KURANG)
+      - name: Accept licenses
+        run: |
+          yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
+
+      # 🔥 INSTALL VERSI YANG BENAR (ANTI 37)
+      - name: Install SDK 33
+        run: |
+          yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
+
+      # 🔥 BUILD FINAL
       - name: Build APK
         run: |
           buildozer android debug
