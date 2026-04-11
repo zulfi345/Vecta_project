@@ -1,4 +1,4 @@
-name: Build APK (FIX FINAL)
+name: Build APK (FINAL FIX SDK)
 
 on:
   push:
@@ -33,26 +33,32 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 🔥 INIT dulu biar SDK ke-download
+      # 🔥 INIT dulu
       - name: Init buildozer
         run: |
           buildozer android debug || true
 
-      # 🔥 FIX CONFIG ANDROID
+      # 🔥 FIX PATH SDK
+      - name: Setup SDK path
+        run: |
+          export SDKMANAGER=~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
+          echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
+
+      # 🔥 FIX CONFIG
       - name: Fix Android config
         run: |
           mkdir -p ~/.android
           echo "count=0" > ~/.android/repositories.cfg
 
-      # 🔥 ACCEPT LICENSE (INI YANG KAMU KURANG)
+      # 🔥 ACCEPT LICENSE (FIX)
       - name: Accept licenses
         run: |
-          yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
+          yes | $SDKMANAGER --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
 
-      # 🔥 INSTALL VERSI YANG BENAR (ANTI 37)
+      # 🔥 INSTALL SDK YANG BENAR
       - name: Install SDK 33
         run: |
-          yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager \
+          yes | $SDKMANAGER --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
             "platform-tools" \
             "platforms;android-33" \
             "build-tools;33.0.2"
