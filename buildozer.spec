@@ -6,22 +6,25 @@ package.domain = org.test
 source.dir = .
 source.include_exts = py,png,jpg,kv
 
-# 🔥 NAIKKAN VERSION (biar bisa update APK)
+# versi app
 version = 0.2
 
-# 🔥 TAMBAH PLYER
+# library
 requirements = python3,kivy,plyer
 
 orientation = portrait
 
-# 🔥 ANDROID STABLE
+# android config
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
 android.build_tools = 33.0.2
 
-# 🔥 PERMISSION STORAGE
-android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+# 🔥 PERMISSION LENGKAP (FIX GALERI)
+android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
 
-# 🔥 ICON (WAJIB SESUAI NAMA FILE)
+# 🔥 FIX AKSES FILE ANDROID 11+
+android.enable_androidx = True
+
+# icon
 icon.filename = icon.png
