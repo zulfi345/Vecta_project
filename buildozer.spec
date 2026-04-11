@@ -1,29 +1,34 @@
 [app]
 
+# Nama aplikasi (yang tampil di HP)
 title = Vecta Kasir
+
+# Nama package (huruf kecil, tanpa spasi)
 package.name = vectakasir
-package.domain = org.vectakasir
+
+# Domain (unik, bebas tapi format seperti domain)
+package.domain = org.test
+
+# Folder source
+source.dir = .
+
+# File yang di-include
+source.include_exts = py
+
+# Versi aplikasi
 version = 0.1
 
-source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
-
+# Library yang digunakan
 requirements = python3,kivy
 
+# Orientasi layar
 orientation = portrait
 
-android.permissions = INTERNET
+# Versi Android API
 android.api = 30
+
+# Minimum Android
 android.minapi = 21
-android.ndk = 23c
-android.sdk = 30
-android.arch = arm64-v8a
-android.accept_sdk_license = True
 
-log_level = 2
-warnings = True
-
-[buildozer]
-
-log_level = 2
-warnings = True
+# 🔥 WAJIB (biar tidak error)
+android.ndk = 25b
