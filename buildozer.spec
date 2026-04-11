@@ -19,7 +19,6 @@ android.api = 33
 android.minapi = 21
 android.ndk = 25b
 android.build_tools = 33.0.2
-p4a.branch = stable
 
 # 🔥 PERMISSION LENGKAP (FIX GALERI)
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
