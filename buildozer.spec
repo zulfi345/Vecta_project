@@ -32,3 +32,5 @@ android.minapi = 21
 
 # 🔥 WAJIB (biar tidak error)
 android.ndk = 25b
+
+icon.filename = icon.png
