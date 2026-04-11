@@ -1,4 +1,4 @@
-name: Build APK (FINAL FIX)
+name: Build APK (FINAL STABLE)
 
 on:
   push:
@@ -16,15 +16,25 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🧹 Clean build
+      # 🔥 Pastikan environment bersih
+      - name: 🧹 Clean environment
         run: |
           rm -rf .buildozer
-          yes | buildozer android clean
+          rm -rf bin
+          rm -rf .gradle
 
+      # 🔥 Install dependency tambahan (biar ga missing lagi)
+      - name: 📦 Install dependencies
+        run: |
+          apt update
+          apt install -y zip unzip openjdk-17-jdk
+
+      # 🔥 Build APK (auto yes biar ga stuck root prompt)
       - name: 🚀 Build APK
         run: |
           yes | buildozer android debug
 
+      # 🔥 Upload hasil
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
