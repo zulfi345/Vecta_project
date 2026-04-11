@@ -1,4 +1,4 @@
-name: Build APK (FINAL FIX SDK)
+name: Build APK (SUPER STABLE)
 
 on:
   push:
@@ -33,40 +33,10 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 🔥 INIT dulu
-      - name: Init buildozer
+      # 🔥 KUNCI UTAMA DI SINI
+      - name: Build APK (auto accept)
         run: |
-          buildozer android debug || true
-
-      # 🔥 FIX PATH SDK
-      - name: Setup SDK path
-        run: |
-          export SDKMANAGER=~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
-          echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
-
-      # 🔥 FIX CONFIG
-      - name: Fix Android config
-        run: |
-          mkdir -p ~/.android
-          echo "count=0" > ~/.android/repositories.cfg
-
-      # 🔥 ACCEPT LICENSE (FIX)
-      - name: Accept licenses
-        run: |
-          yes | $SDKMANAGER --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
-
-      # 🔥 INSTALL SDK YANG BENAR
-      - name: Install SDK 33
-        run: |
-          yes | $SDKMANAGER --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
-
-      # 🔥 BUILD FINAL
-      - name: Build APK
-        run: |
-          buildozer android debug
+          yes | buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
