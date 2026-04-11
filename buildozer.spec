@@ -20,4 +20,4 @@ android.ndk = 25b
 android.build_tools = 33.0.2
 
 # icon (optional)
-icon.filename = icon.png
+icon.filename = Icon.png
