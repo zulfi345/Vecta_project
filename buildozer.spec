@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv
 version = 0.2
 
 # library
-requirements = python3,kivy,plyer
+requirements = python3,kivy==2.1.0
 
 orientation = portrait
 
