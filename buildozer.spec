@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv
 version = 0.2
 
 # library
-requirements = python3==3.10.11,kivy==2.1.0,cython==0.29.33
+requirements = python3,kivy,cython
 
 orientation = portrait
 
