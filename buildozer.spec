@@ -24,7 +24,7 @@ android.permissions = INTERNET
 
 # 🔥 FIX AKSES FILE ANDROID 11+
 android.enable_androidx = True
-p4a.branch = stable
+p4a.branch = develop
 
 android.disable_ccache = True
 p4a.extra_env_vars = USE_CCACHE=0
