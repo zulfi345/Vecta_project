@@ -28,4 +28,4 @@ p4a.extra_env_vars = USE_CCACHE=0
 log_level = 2
 warnings = 1
 
-icon.filename = icon.png
+icon.filename = Icon.png
