@@ -3,22 +3,25 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
-
+from kivy.uix.popup import Popup
+from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 
-from kivy.graphics import Color, RoundedRectangle
-from kivy.metrics import dp
+from plyer import filechooser
 
 import sqlite3
 import os
+import shutil
+from datetime import datetime
 
 # ================= DATABASE =================
 def init_db():
-    conn = sqlite3.connect('produk.db')
+    conn = sqlite3.connect('kasir.db')
     c = conn.cursor()
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS produk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,205 +31,285 @@ def init_db():
         )
     ''')
 
-    # DATA CONTOH (biar langsung tampil)
-    if not c.execute("SELECT * FROM produk").fetchone():
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Ayam Goreng',15000,'')")
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Nasi Putih',5000,'')")
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Sambal Ayam',20000,'')")
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Sambal Tempe',10000,'')")
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS transaksi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tanggal TEXT,
+            total INTEGER
+        )
+    ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS setting (
+            id INTEGER PRIMARY KEY,
+            nama_toko TEXT
+        )
+    ''')
+
+    c.execute("INSERT OR IGNORE INTO setting (id, nama_toko) VALUES (1, 'VECTA KASIR')")
 
     conn.commit()
     conn.close()
 
 # ================= SCREEN =================
-class SplashScreen(Screen):
-    def on_enter(self):
-        Clock.schedule_once(self.goto_home, 2)
-
-    def goto_home(self, dt):
-        self.manager.current = 'home'
-
-class HomeScreen(Screen):
+class MainScreen(Screen):
     total = 0
 
     def on_enter(self):
+        self.load_toko()
         self.load_produk()
 
+    def load_toko(self):
+        conn = sqlite3.connect('kasir.db')
+        c = conn.cursor()
+        nama = c.execute("SELECT nama_toko FROM setting WHERE id=1").fetchone()[0]
+        conn.close()
+        self.ids.nama_toko.text = nama
+
     def load_produk(self):
-        self.ids.produk_list.clear_widgets()
+        self.ids.produk_grid.clear_widgets()
         self.total = 0
         self.update_total()
 
-        conn = sqlite3.connect('produk.db')
+        conn = sqlite3.connect('kasir.db')
         c = conn.cursor()
         data = c.execute("SELECT * FROM produk").fetchall()
         conn.close()
+    for item in data:
+    nama, harga, gambar = item[1], item[2], item[3]
 
-        for item in data:
-            nama, harga, gambar = item[1], item[2], item[3]
+    box = BoxLayout(
+        orientation='vertical',
+        size_hint_y=None,
+        height=280,
+        padding=8,
+        spacing=5
+    )
 
-            card = BoxLayout(
-                orientation='vertical',
-                size_hint_y=None,
-                height=250,
-                padding=10,
-                spacing=5
-            )
+    # 🔥 background rounded
+    with box.canvas.before:
+        Color(1,1,1,1)
+        box.rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[15])
 
-            # CARD STYLE
-            with card.canvas.before:
-                Color(1,1,1,1)
-                rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[20])
+    def update_rect(instance, value):
+        box.rect.pos = instance.pos
+        box.rect.size = instance.size
 
-            def update_rect(instance, value):
-                rect.pos = instance.pos
-                rect.size = instance.size
+    box.bind(pos=update_rect, size=update_rect)
 
-            card.bind(pos=update_rect, size=update_rect)
+    # 🔥 gambar
+    img = Image(
+        source=gambar if gambar else "",
+        size_hint_y=None,
+        height=140
+    )
+    box.add_widget(img)
 
-            # IMAGE
-            if gambar and os.path.exists(gambar):
-                img = Image(source=gambar, size_hint_y=0.6)
-            else:
-                img = Image(size_hint_y=0.6)
+    # 🔥 nama
+    box.add_widget(Label(text=nama, bold=True))
 
-            card.add_widget(img)
+    # 🔥 harga
+    box.add_widget(Label(
+        text=f"Rp {harga}",
+        color=(0.2,0.6,0.2,1)
+    ))
 
-            # NAMA
-            card.add_widget(Label(text=nama, size_hint_y=0.2))
+    # 🔥 qty
+    qty = TextInput(text='0', size_hint_y=None, height=40)
 
-            # HARGA
-            card.add_widget(Label(text=f"Rp {harga}", size_hint_y=0.2))
+    def tambah(x, harga=harga, qty=qty):
+        val = int(qty.text)
+        val += 1
+        qty.text = str(val)
+        self.total += harga
+        self.update_total()
 
-            # TOMBOL +
-            def tambah(instance, harga=harga):
-                self.total += harga
-                self.update_total()
+    def kurang(x, harga=harga, qty=qty):
+        val = int(qty.text)
+        if val > 0:
+            val -= 1
+            qty.text = str(val)
+            self.total -= harga
+            self.update_total()
 
-            btn = Button(
-                text="+",
-                size_hint=(None,None),
-                size=(40,40),
-                pos_hint={"right":1}
-            )
-            btn.bind(on_press=tambah)
-            card.add_widget(btn)
+    row = BoxLayout(size_hint_y=None, height=40)
 
-            self.ids.produk_list.add_widget(card)
+    btn_minus = Button(text='-')
+    btn_plus = Button(text='+')
+
+    btn_minus.bind(on_press=kurang)
+    btn_plus.bind(on_press=tambah)
+
+    row.add_widget(btn_minus)
+    row.add_widget(qty)
+    row.add_widget(btn_plus)
+
+    box.add_widget(row)
+
+    self.ids.produk_grid.add_widget(box)
+
+            
 
     def update_total(self):
         self.ids.total_label.text = f"Total: Rp {self.total}"
 
-# ================= KV =================
+    def bayar(self):
+        conn = sqlite3.connect('kasir.db')
+        c = conn.cursor()
+
+        c.execute("INSERT INTO transaksi (tanggal,total) VALUES (?,?)",
+                  (datetime.now().strftime("%Y-%m-%d %H:%M"), self.total))
+
+        conn.commit()
+        conn.close()
+
+        popup = Popup(
+            title='Struk',
+            content=Label(text=f"Total Bayar: Rp {self.total}"),
+            size_hint=(0.8,0.5)
+        )
+        popup.open()
+
+        self.total = 0
+        self.update_total()
+
+    def ganti_nama(self):
+        def simpan(instance):
+            conn = sqlite3.connect('kasir.db')
+            c = conn.cursor()
+            c.execute("UPDATE setting SET nama_toko=?", (input_nama.text,))
+            conn.commit()
+            conn.close()
+            self.load_toko()
+            popup.dismiss()
+
+        input_nama = TextInput()
+        btn = Button(text="Simpan", on_press=simpan)
+
+        layout = BoxLayout(orientation='vertical')
+        layout.add_widget(input_nama)
+        layout.add_widget(btn)
+
+        popup = Popup(title="Nama Toko", content=layout, size_hint=(0.8,0.5))
+        popup.open()
+
+    def pilih_gambar(self):
+        filechooser.open_file(on_selection=self.set_gambar)
+
+    def set_gambar(self, selection):
+        if selection:
+            path = selection[0]
+            new_path = os.path.join('.', os.path.basename(path))
+            if not os.path.exists(new_path):
+                shutil.copy(path, new_path)
+            self.selected_image = new_path
+
+    def tambah_produk(self):
+        nama = self.ids.input_nama.text
+        harga = self.ids.input_harga.text
+        gambar = getattr(self, 'selected_image', '')
+
+        if not nama or not harga.isdigit():
+            return
+
+        conn = sqlite3.connect('kasir.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES (?,?,?)",
+                  (nama, int(harga), gambar))
+        conn.commit()
+        conn.close()
+
+        self.load_produk()
+
+# ================= UI =================
 KV = '''
-#:import dp kivy.metrics.dp
-
 ScreenManager:
-    SplashScreen:
-    HomeScreen:
+    MainScreen:
 
-<SplashScreen>:
-    name: 'splash'
-
-    BoxLayout:
-        orientation: 'vertical'
-        spacing: dp(20)
-        padding: dp(20)
-
-        canvas.before:
-            Color:
-                rgba: 0.1,0.2,0.4,1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-
-        Image:
-            source: 'logo.png'
-
-        Label:
-            text: 'VECTA PROJECT'
-            font_size: '28sp'
-            color: 1,1,1,1
-
-<HomeScreen>:
-    name: 'home'
+<MainScreen>:
+    name: 'main'
 
     BoxLayout:
         orientation: 'vertical'
+        spacing: 10
 
-        # ===== BACKGROUND =====
-        canvas.before:
-            Color:
-                rgba: 0.95,0.95,0.95,1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-
-        # ===== HEADER =====
+        # ================= HEADER =================
         BoxLayout:
-            size_hint_y: None
-            height: dp(80)
-            padding: dp(10)
-
+            size_hint_y: 0.15
+            padding: 10
+            spacing: 10
             canvas.before:
                 Color:
-                    rgba: 0.1,0.2,0.4,1
+                    rgba: 0.1,0.2,0.35,1
                 Rectangle:
                     pos: self.pos
                     size: self.size
 
-            Label:
-                text: 'VECTA KASIR'
-                color: 1,1,1,1
-                font_size: '18sp'
+            Image:
+                source: 'icon.png'
+                size_hint_x: 0.2
 
-        # ===== GRID PRODUK =====
+            BoxLayout:
+                orientation: 'vertical'
+
+                Label:
+                    id: nama_toko
+                    text: 'VECTA KASIR'
+                    color: 1,1,1,1
+                    bold: True
+
+                Label:
+                    text: 'Alamat toko'
+                    color: 1,1,1,0.7
+                    font_size: 12
+
+            Button:
+                text: '☰'
+                size_hint_x: 0.2
+                on_press: root.ganti_nama()
+
+        # ================= PRODUK =================
         ScrollView:
             GridLayout:
-                id: produk_list
+                id: produk_grid
                 cols: 2
-                spacing: dp(10)
-                padding: dp(10)
+                spacing: 10
+                padding: 10
                 size_hint_y: None
                 height: self.minimum_height
 
-        # ===== TOTAL + BAYAR =====
+        # ================= TOTAL =================
         BoxLayout:
-            size_hint_y: None
-            height: dp(70)
-            padding: dp(10)
-            spacing: dp(10)
-
-            canvas.before:
-                Color:
-                    rgba: 1,1,1,1
-                RoundedRectangle:
-                    pos: self.pos
-                    size: self.size
-                    radius: [20]
+            size_hint_y: 0.1
+            padding: 10
+            spacing: 10
 
             Label:
                 id: total_label
                 text: 'Total: Rp 0'
+                bold: True
 
             Button:
                 text: 'Bayar'
-                size_hint_x: 0.4
-                background_color: 0.1,0.2,0.4,1
+                background_color: 0.1,0.3,0.6,1
+                on_press: root.bayar()
 
-        # ===== NAVBAR =====
+        # ================= NAVBAR =================
         BoxLayout:
-            size_hint_y: None
-            height: dp(70)
+            size_hint_y: 0.1
+            spacing: 5
 
             Button:
-                text: '🏠\\nHome'
+                text: '🏠\nHome'
+
             Button:
-                text: '⬛\\nProduk'
+                text: '📦\nProduk'
+
             Button:
-                text: '🛒\\nTransaksi'
+                text: '🛒\nKasir'
+
             Button:
-                text: '📊\\nLaporan'
+                text: '📊\nLaporan'
 '''
 
 # ================= APP =================
