@@ -3,7 +3,6 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
-from plyer import filechooser
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -12,7 +11,6 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 
 import sqlite3
-import shutil
 import os
 
 # ================= DATABASE =================
@@ -62,7 +60,11 @@ class ProdukScreen(Screen):
 
             box = BoxLayout(size_hint_y=None, height=120, spacing=10)
 
-            img = Image(source=gambar if gambar else "")
+            # 🔥 FIX IMAGE (AMAN)
+            if gambar and os.path.exists(gambar):
+                img = Image(source=gambar)
+            else:
+                img = Image()
             box.add_widget(img)
 
             info = BoxLayout(orientation='vertical')
@@ -96,26 +98,13 @@ class ProdukScreen(Screen):
     def update_total(self):
         self.ids.total_label.text = f"Total: Rp {self.total}"
 
-    # ================= TAMBAH PRODUK =================
+    # 🔥 FIX: NONAKTIF FILECHOOSER
     def pilih_gambar(self):
-        filechooser.open_file(on_selection=self.set_gambar)
-
-    def set_gambar(self, selection):
-        if selection:
-            path = selection[0]
-            filename = os.path.basename(path)
-            new_path = os.path.join('.', filename)
-
-            if not os.path.exists(new_path):
-                shutil.copy(path, new_path)
-
-            self.ids.img_preview.source = new_path
-            self.selected_image = new_path
+        print("File chooser dimatikan sementara")
 
     def tambah_produk(self):
         nama = self.ids.input_nama.text
         harga = self.ids.input_harga.text
-        gambar = getattr(self, 'selected_image', '')
 
         if not nama or not harga:
             return
@@ -126,14 +115,13 @@ class ProdukScreen(Screen):
         conn = sqlite3.connect('produk.db')
         c = conn.cursor()
         c.execute("INSERT INTO produk (nama,harga,gambar) VALUES (?,?,?)",
-                  (nama, int(harga), gambar))
+                  (nama, int(harga), ""))
         conn.commit()
         conn.close()
 
         self.ids.input_nama.text = ''
         self.ids.input_harga.text = ''
         self.ids.img_preview.source = ''
-        self.selected_image = ''
 
         self.load_produk()
 
@@ -148,9 +136,6 @@ ScreenManager:
     name: 'splash'
     BoxLayout:
         orientation: 'vertical'
-
-        Image:
-            source: 'logo.png'
 
         Label:
             text: 'VECTA PROJECT'
@@ -183,7 +168,6 @@ ScreenManager:
     BoxLayout:
         orientation: 'vertical'
 
-        # INPUT
         TextInput:
             id: input_nama
             hint_text: 'Nama Produk'
@@ -204,7 +188,6 @@ ScreenManager:
             text: 'Tambah Produk'
             on_press: root.tambah_produk()
 
-        # LIST PRODUK
         ScrollView:
             BoxLayout:
                 id: produk_list
@@ -212,13 +195,11 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
 
-        # TOTAL
         Label:
             id: total_label
             text: 'Total: Rp 0'
             size_hint_y: 0.1
 
-        # MENU
         BoxLayout:
             size_hint_y: 0.1
 
