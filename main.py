@@ -8,7 +8,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
 
 import sqlite3
 import os
@@ -58,75 +57,58 @@ class ProdukScreen(Screen):
         for item in data:
             nama, harga, gambar = item[1], item[2], item[3]
 
-            box = BoxLayout(size_hint_y=None, height=120, spacing=10)
+            card = BoxLayout(
+                orientation='vertical',
+                size_hint_y=None,
+                height=250,
+                padding=5,
+                spacing=5
+            )
 
-            # 🔥 FIX IMAGE (AMAN)
+            # background card
+            from kivy.graphics import Color, RoundedRectangle
+            with card.canvas.before:
+                Color(1,1,1,1)
+                rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[15])
+
+            def update_rect(instance, value):
+                rect.pos = instance.pos
+                rect.size = instance.size
+
+            card.bind(pos=update_rect, size=update_rect)
+
+            # gambar
             if gambar and os.path.exists(gambar):
-                img = Image(source=gambar)
+                img = Image(source=gambar, size_hint_y=0.6)
             else:
-                img = Image()
-            box.add_widget(img)
+                img = Image(size_hint_y=0.6)
 
-            info = BoxLayout(orientation='vertical')
-            info.add_widget(Label(text=nama))
-            info.add_widget(Label(text=f"Rp {harga}"))
-            box.add_widget(info)
+            card.add_widget(img)
 
-            qty_input = TextInput(text='0', size_hint_x=0.3)
+            # nama
+            card.add_widget(Label(text=nama, size_hint_y=0.2))
 
-            def tambah(instance, harga=harga, qty_input=qty_input):
-                val = int(qty_input.text)
-                val += 1
-                qty_input.text = str(val)
+            # harga
+            card.add_widget(Label(text=f"Rp {harga}", size_hint_y=0.2))
+
+            # tombol +
+            def tambah(instance, harga=harga):
                 self.total += harga
                 self.update_total()
 
-            def kurang(instance, harga=harga, qty_input=qty_input):
-                val = int(qty_input.text)
-                if val > 0:
-                    val -= 1
-                    qty_input.text = str(val)
-                    self.total -= harga
-                    self.update_total()
+            btn = Button(text="+", size_hint_y=0.2)
+            btn.bind(on_press=tambah)
+            card.add_widget(btn)
 
-            box.add_widget(Button(text='-', on_press=kurang))
-            box.add_widget(qty_input)
-            box.add_widget(Button(text='+', on_press=tambah))
-
-            self.ids.produk_list.add_widget(box)
+            self.ids.produk_list.add_widget(card)
 
     def update_total(self):
         self.ids.total_label.text = f"Total: Rp {self.total}"
 
-    # 🔥 FIX: NONAKTIF FILECHOOSER
-    def pilih_gambar(self):
-        print("File chooser dimatikan sementara")
-
-    def tambah_produk(self):
-        nama = self.ids.input_nama.text
-        harga = self.ids.input_harga.text
-
-        if not nama or not harga:
-            return
-
-        if not harga.isdigit():
-            return
-
-        conn = sqlite3.connect('produk.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES (?,?,?)",
-                  (nama, int(harga), ""))
-        conn.commit()
-        conn.close()
-
-        self.ids.input_nama.text = ''
-        self.ids.input_harga.text = ''
-        self.ids.img_preview.source = ''
-
-        self.load_produk()
-
 # ================= KV =================
 KV = '''
+#:import dp kivy.metrics.dp
+
 ScreenManager:
     SplashScreen:
     HomeScreen:
@@ -136,10 +118,23 @@ ScreenManager:
     name: 'splash'
     BoxLayout:
         orientation: 'vertical'
+        spacing: dp(20)
+        padding: dp(20)
+
+        canvas.before:
+            Color:
+                rgba: 0.1,0.2,0.4,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        Image:
+            source: 'logo.png'
 
         Label:
             text: 'VECTA PROJECT'
             font_size: '28sp'
+            color: 1,1,1,1
 
 <HomeScreen>:
     name: 'home'
@@ -148,19 +143,12 @@ ScreenManager:
 
         Label:
             text: 'Beranda'
+            font_size: '20sp'
 
-        BoxLayout:
-            size_hint_y: 0.1
-
-            Button:
-                text: 'Home'
-            Button:
-                text: 'Produk'
-                on_press: app.root.current = 'produk'
-            Button:
-                text: 'Kasir'
-            Button:
-                text: 'Laporan'
+        Button:
+            text: 'Masuk ke Produk'
+            size_hint_y: 0.2
+            on_press: app.root.current = 'produk'
 
 <ProdukScreen>:
     name: 'produk'
@@ -168,40 +156,45 @@ ScreenManager:
     BoxLayout:
         orientation: 'vertical'
 
-        TextInput:
-            id: input_nama
-            hint_text: 'Nama Produk'
+        # HEADER
+        BoxLayout:
+            size_hint_y: None
+            height: dp(80)
+            padding: dp(10)
 
-        TextInput:
-            id: input_harga
-            hint_text: 'Harga'
+            canvas.before:
+                Color:
+                    rgba: 0.1,0.2,0.4,1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
 
-        Image:
-            id: img_preview
-            size_hint_y: 0.3
+            Label:
+                text: 'Vecta Kasir'
+                color: 1,1,1,1
+                font_size: '18sp'
 
-        Button:
-            text: 'Pilih Gambar'
-            on_press: root.pilih_gambar()
-
-        Button:
-            text: 'Tambah Produk'
-            on_press: root.tambah_produk()
-
+        # GRID PRODUK
         ScrollView:
-            BoxLayout:
+            GridLayout:
                 id: produk_list
-                orientation: 'vertical'
+                cols: 2
+                spacing: dp(10)
+                padding: dp(10)
                 size_hint_y: None
                 height: self.minimum_height
 
+        # TOTAL
         Label:
             id: total_label
             text: 'Total: Rp 0'
-            size_hint_y: 0.1
+            size_hint_y: None
+            height: dp(50)
 
+        # NAVBAR
         BoxLayout:
-            size_hint_y: 0.1
+            size_hint_y: None
+            height: dp(60)
 
             Button:
                 text: 'Home'
