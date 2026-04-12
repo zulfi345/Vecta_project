@@ -2,19 +2,16 @@ from kivy.app import App
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.clock import Clock
 from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.button import Button
-
+from kivy.graphics import Color, Rectangle, Line
 from plyer import filechooser
 
-import sqlite3
-import os
-import shutil
+import sqlite3, os, shutil, csv
 from datetime import datetime
 
 # ================= DATABASE =================
@@ -22,302 +19,253 @@ def init_db():
     conn = sqlite3.connect('kasir.db')
     c = conn.cursor()
 
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS produk (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama TEXT,
-            harga INTEGER,
-            gambar TEXT
-        )
-    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS user (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT, password TEXT)''')
 
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS transaksi (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tanggal TEXT,
-            total INTEGER
-        )
-    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS produk (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama TEXT, harga INTEGER, gambar TEXT)''')
 
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS setting (
-            id INTEGER PRIMARY KEY,
-            nama_toko TEXT
-        )
-    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS transaksi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tanggal TEXT, total INTEGER, detail TEXT)''')
 
-    c.execute("INSERT OR IGNORE INTO setting (id, nama_toko) VALUES (1, 'VECTA KASIR')")
+    c.execute("INSERT OR IGNORE INTO user VALUES (1,'admin','1234')")
 
     conn.commit()
     conn.close()
 
-# ================= SCREEN =================
+# ================= LOGIN =================
+class LoginScreen(Screen):
+    def login(self):
+        u = self.ids.user.text
+        p = self.ids.passw.text
+
+        conn = sqlite3.connect('kasir.db')
+        data = conn.execute("SELECT * FROM user WHERE username=? AND password=?", (u,p)).fetchone()
+        conn.close()
+
+        if data:
+            self.manager.current = 'main'
+        else:
+            Popup(title="Error", content=Label(text="Login gagal"), size_hint=(0.6,0.4)).open()
+
+# ================= MAIN =================
 class MainScreen(Screen):
     total = 0
+    keranjang = []
 
     def on_enter(self):
-        self.load_toko()
         self.load_produk()
-
-    def load_toko(self):
-        conn = sqlite3.connect('kasir.db')
-        c = conn.cursor()
-        nama = c.execute("SELECT nama_toko FROM setting WHERE id=1").fetchone()[0]
-        conn.close()
-        self.ids.nama_toko.text = nama
 
     def load_produk(self):
-        self.ids.produk_grid.clear_widgets()
+        self.ids.grid.clear_widgets()
         self.total = 0
+        self.keranjang = []
         self.update_total()
 
         conn = sqlite3.connect('kasir.db')
-        c = conn.cursor()
-        data = c.execute("SELECT * FROM produk").fetchall()
+        data = conn.execute("SELECT * FROM produk").fetchall()
         conn.close()
-    for item in data:
-    nama, harga, gambar = item[1], item[2], item[3]
 
-    box = BoxLayout(
-        orientation='vertical',
-        size_hint_y=None,
-        height=280,
-        padding=8,
-        spacing=5
-    )
+        for item in data:
+            nama, harga, gambar = item[1], item[2], item[3]
 
-    # 🔥 background rounded
-    with box.canvas.before:
-        Color(1,1,1,1)
-        box.rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[15])
+            box = BoxLayout(orientation='vertical', size_hint_y=None, height=280)
 
-    def update_rect(instance, value):
-        box.rect.pos = instance.pos
-        box.rect.size = instance.size
+            img = Image(source=gambar if gambar else "")
+            box.add_widget(img)
 
-    box.bind(pos=update_rect, size=update_rect)
+            box.add_widget(Label(text=nama))
+            box.add_widget(Label(text=f"Rp {harga}"))
 
-    # 🔥 gambar
-    img = Image(
-        source=gambar if gambar else "",
-        size_hint_y=None,
-        height=140
-    )
-    box.add_widget(img)
+            qty = TextInput(text='0', input_filter='int')
 
-    # 🔥 nama
-    box.add_widget(Label(text=nama, bold=True))
+            def tambah(x):
+                qty.text = str(int(qty.text)+1)
+                self.total += harga
+                self.keranjang.append((nama,harga))
+                self.update_total()
 
-    # 🔥 harga
-    box.add_widget(Label(
-        text=f"Rp {harga}",
-        color=(0.2,0.6,0.2,1)
-    ))
+            def kurang(x):
+                if int(qty.text)>0:
+                    qty.text = str(int(qty.text)-1)
+                    self.total -= harga
+                    self.update_total()
 
-    # 🔥 qty
-    qty = TextInput(text='0', size_hint_y=None, height=40)
+            row = BoxLayout(size_hint_y=None, height=40)
+            b1 = Button(text='-')
+            b2 = Button(text='+')
+            b1.bind(on_press=kurang)
+            b2.bind(on_press=tambah)
 
-    def tambah(x, harga=harga, qty=qty):
-        val = int(qty.text)
-        val += 1
-        qty.text = str(val)
-        self.total += harga
-        self.update_total()
+            row.add_widget(b1)
+            row.add_widget(qty)
+            row.add_widget(b2)
 
-    def kurang(x, harga=harga, qty=qty):
-        val = int(qty.text)
-        if val > 0:
-            val -= 1
-            qty.text = str(val)
-            self.total -= harga
-            self.update_total()
-
-    row = BoxLayout(size_hint_y=None, height=40)
-
-    btn_minus = Button(text='-')
-    btn_plus = Button(text='+')
-
-    btn_minus.bind(on_press=kurang)
-    btn_plus.bind(on_press=tambah)
-
-    row.add_widget(btn_minus)
-    row.add_widget(qty)
-    row.add_widget(btn_plus)
-
-    box.add_widget(row)
-
-    self.ids.produk_grid.add_widget(box)
-
-            
+            box.add_widget(row)
+            self.ids.grid.add_widget(box)
 
     def update_total(self):
-        self.ids.total_label.text = f"Total: Rp {self.total}"
+        self.ids.total.text = f"Total: {self.total}"
 
+    # ================= BAYAR =================
     def bayar(self):
+        detail = "\n".join([f"{n} - {h}" for n,h in self.keranjang])
+
         conn = sqlite3.connect('kasir.db')
-        c = conn.cursor()
-
-        c.execute("INSERT INTO transaksi (tanggal,total) VALUES (?,?)",
-                  (datetime.now().strftime("%Y-%m-%d %H:%M"), self.total))
-
+        conn.execute("INSERT INTO transaksi VALUES (NULL,?,?,?)",
+                     (datetime.now().strftime("%Y-%m-%d"), self.total, detail))
         conn.commit()
         conn.close()
 
-        popup = Popup(
-            title='Struk',
-            content=Label(text=f"Total Bayar: Rp {self.total}"),
-            size_hint=(0.8,0.5)
-        )
-        popup.open()
+        Popup(title="Struk", content=Label(text=detail), size_hint=(0.8,0.6)).open()
 
-        self.total = 0
-        self.update_total()
+        self.print_bluetooth(detail)
 
-    def ganti_nama(self):
-        def simpan(instance):
-            conn = sqlite3.connect('kasir.db')
-            c = conn.cursor()
-            c.execute("UPDATE setting SET nama_toko=?", (input_nama.text,))
-            conn.commit()
-            conn.close()
-            self.load_toko()
-            popup.dismiss()
+        self.load_produk()
 
-        input_nama = TextInput()
-        btn = Button(text="Simpan", on_press=simpan)
+    # ================= BLUETOOTH PRINT =================
+    def print_bluetooth(self, text):
+        try:
+            import bluetooth
+            devices = bluetooth.discover_devices()
+            if devices:
+                addr = devices[0]
+                sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+                sock.connect((addr,1))
+                sock.send(text)
+                sock.close()
+        except:
+            print("Printer tidak tersedia")
 
-        layout = BoxLayout(orientation='vertical')
-        layout.add_widget(input_nama)
-        layout.add_widget(btn)
-
-        popup = Popup(title="Nama Toko", content=layout, size_hint=(0.8,0.5))
-        popup.open()
-
+    # ================= TAMBAH PRODUK =================
     def pilih_gambar(self):
-        filechooser.open_file(on_selection=self.set_gambar)
+        filechooser.open_file(on_selection=self.set_img)
 
-    def set_gambar(self, selection):
-        if selection:
-            path = selection[0]
-            new_path = os.path.join('.', os.path.basename(path))
-            if not os.path.exists(new_path):
-                shutil.copy(path, new_path)
-            self.selected_image = new_path
+    def set_img(self, sel):
+        if sel:
+            path = sel[0]
+            new = os.path.basename(path)
+            shutil.copy(path,new)
+            self.img = new
 
-    def tambah_produk(self):
-        nama = self.ids.input_nama.text
-        harga = self.ids.input_harga.text
-        gambar = getattr(self, 'selected_image', '')
-
-        if not nama or not harga.isdigit():
-            return
+    def tambah(self):
+        nama = self.ids.nama.text
+        harga = self.ids.harga.text
 
         conn = sqlite3.connect('kasir.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES (?,?,?)",
-                  (nama, int(harga), gambar))
+        conn.execute("INSERT INTO produk VALUES (NULL,?,?,?)",
+                     (nama,int(harga),getattr(self,'img','')))
         conn.commit()
         conn.close()
 
         self.load_produk()
+
+    # ================= LAPORAN =================
+    def laporan(self):
+        conn = sqlite3.connect('kasir.db')
+        data = conn.execute("SELECT total FROM transaksi").fetchall()
+        conn.close()
+
+        popup = Popup(title="Grafik", size_hint=(0.8,0.6))
+        box = BoxLayout()
+
+        with box.canvas:
+            Color(0,0,1,1)
+            x = 10
+            for d in data:
+                Line(points=[x,10,x,10+d[0]/100])
+                x += 30
+
+        popup.content = box
+        popup.open()
+
+    def export(self):
+        conn = sqlite3.connect('kasir.db')
+        data = conn.execute("SELECT * FROM transaksi").fetchall()
+        conn.close()
+
+        with open("laporan.csv","w") as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+
+    def backup(self):
+        shutil.copy("kasir.db","backup.db")
 
 # ================= UI =================
 KV = '''
 ScreenManager:
+    LoginScreen:
     MainScreen:
 
-<MainScreen>:
-    name: 'main'
-
+<LoginScreen>:
+    name:'login'
     BoxLayout:
-        orientation: 'vertical'
-        spacing: 10
+        orientation:'vertical'
+        TextInput:
+            id:user
+            hint_text:'Username'
+        TextInput:
+            id:passw
+            hint_text:'Password'
+        Button:
+            text:'Login'
+            on_press:root.login()
 
-        # ================= HEADER =================
+<MainScreen>:
+    name:'main'
+    BoxLayout:
+        orientation:'vertical'
+
         BoxLayout:
-            size_hint_y: 0.15
-            padding: 10
-            spacing: 10
-            canvas.before:
-                Color:
-                    rgba: 0.1,0.2,0.35,1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
+            TextInput:
+                id:nama
+                hint_text:'Nama'
+            TextInput:
+                id:harga
+                hint_text:'Harga'
 
-            Image:
-                source: 'icon.png'
-                size_hint_x: 0.2
+        Button:
+            text:'Pilih Gambar'
+            on_press:root.pilih_gambar()
 
-            BoxLayout:
-                orientation: 'vertical'
+        Button:
+            text:'Tambah Produk'
+            on_press:root.tambah()
 
-                Label:
-                    id: nama_toko
-                    text: 'VECTA KASIR'
-                    color: 1,1,1,1
-                    bold: True
-
-                Label:
-                    text: 'Alamat toko'
-                    color: 1,1,1,0.7
-                    font_size: 12
-
-            Button:
-                text: '☰'
-                size_hint_x: 0.2
-                on_press: root.ganti_nama()
-
-        # ================= PRODUK =================
         ScrollView:
             GridLayout:
-                id: produk_grid
-                cols: 2
-                spacing: 10
-                padding: 10
-                size_hint_y: None
-                height: self.minimum_height
+                id:grid
+                cols:2
+                size_hint_y:None
+                height:self.minimum_height
 
-        # ================= TOTAL =================
+        Label:
+            id:total
+            text:'Total: 0'
+
+        Button:
+            text:'Bayar'
+            on_press:root.bayar()
+
         BoxLayout:
-            size_hint_y: 0.1
-            padding: 10
-            spacing: 10
-
-            Label:
-                id: total_label
-                text: 'Total: Rp 0'
-                bold: True
-
             Button:
-                text: 'Bayar'
-                background_color: 0.1,0.3,0.6,1
-                on_press: root.bayar()
-
-        # ================= NAVBAR =================
-        BoxLayout:
-            size_hint_y: 0.1
-            spacing: 5
-
+                text:'Grafik'
+                on_press:root.laporan()
             Button:
-                text: '🏠\nHome'
-
+                text:'Export'
+                on_press:root.export()
             Button:
-                text: '📦\nProduk'
-
-            Button:
-                text: '🛒\nKasir'
-
-            Button:
-                text: '📊\nLaporan'
+                text:'Backup'
+                on_press:root.backup()
 '''
 
-# ================= APP =================
 class VectaApp(App):
     def build(self):
         init_db()
-        Window.clearcolor = (1,1,1,1)
+        Window.clearcolor=(1,1,1,1)
         return Builder.load_string(KV)
 
-if __name__ == "__main__":
-    VectaApp().run()
+VectaApp().run()
