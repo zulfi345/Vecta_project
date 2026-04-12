@@ -8,7 +8,7 @@ source.include_exts = py,png,jpg,kv
 
 version = 0.2
 
-requirements = python3,kivy==2.2.1,pyjnius,setuptools,wheel
+requirements = python3,kivy==2.2.1
 
 orientation = portrait
 
@@ -20,7 +20,7 @@ android.archs = arm64-v8a
 android.permissions = INTERNET
 
 android.enable_androidx = True
-p4a.branch = develop
+p4a.branch = 2024.01.21
 
 android.disable_ccache = True
 p4a.extra_env_vars = USE_CCACHE=0
