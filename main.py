@@ -5,9 +5,12 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
 
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
 from kivy.uix.image import Image
+from kivy.uix.label import Label
 from kivy.uix.button import Button
+
+from kivy.graphics import Color, RoundedRectangle
+from kivy.metrics import dp
 
 import sqlite3
 import os
@@ -24,6 +27,14 @@ def init_db():
             gambar TEXT
         )
     ''')
+
+    # DATA CONTOH (biar langsung tampil)
+    if not c.execute("SELECT * FROM produk").fetchone():
+        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Ayam Goreng',15000,'')")
+        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Nasi Putih',5000,'')")
+        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Sambal Ayam',20000,'')")
+        c.execute("INSERT INTO produk (nama,harga,gambar) VALUES ('Sambal Tempe',10000,'')")
+
     conn.commit()
     conn.close()
 
@@ -36,9 +47,6 @@ class SplashScreen(Screen):
         self.manager.current = 'home'
 
 class HomeScreen(Screen):
-    pass
-
-class ProdukScreen(Screen):
     total = 0
 
     def on_enter(self):
@@ -61,15 +69,14 @@ class ProdukScreen(Screen):
                 orientation='vertical',
                 size_hint_y=None,
                 height=250,
-                padding=5,
+                padding=10,
                 spacing=5
             )
 
-            # background card
-            from kivy.graphics import Color, RoundedRectangle
+            # CARD STYLE
             with card.canvas.before:
                 Color(1,1,1,1)
-                rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[15])
+                rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[20])
 
             def update_rect(instance, value):
                 rect.pos = instance.pos
@@ -77,7 +84,7 @@ class ProdukScreen(Screen):
 
             card.bind(pos=update_rect, size=update_rect)
 
-            # gambar
+            # IMAGE
             if gambar and os.path.exists(gambar):
                 img = Image(source=gambar, size_hint_y=0.6)
             else:
@@ -85,18 +92,23 @@ class ProdukScreen(Screen):
 
             card.add_widget(img)
 
-            # nama
+            # NAMA
             card.add_widget(Label(text=nama, size_hint_y=0.2))
 
-            # harga
+            # HARGA
             card.add_widget(Label(text=f"Rp {harga}", size_hint_y=0.2))
 
-            # tombol +
+            # TOMBOL +
             def tambah(instance, harga=harga):
                 self.total += harga
                 self.update_total()
 
-            btn = Button(text="+", size_hint_y=0.2)
+            btn = Button(
+                text="+",
+                size_hint=(None,None),
+                size=(40,40),
+                pos_hint={"right":1}
+            )
             btn.bind(on_press=tambah)
             card.add_widget(btn)
 
@@ -112,10 +124,10 @@ KV = '''
 ScreenManager:
     SplashScreen:
     HomeScreen:
-    ProdukScreen:
 
 <SplashScreen>:
     name: 'splash'
+
     BoxLayout:
         orientation: 'vertical'
         spacing: dp(20)
@@ -138,25 +150,19 @@ ScreenManager:
 
 <HomeScreen>:
     name: 'home'
-    BoxLayout:
-        orientation: 'vertical'
-
-        Label:
-            text: 'Beranda'
-            font_size: '20sp'
-
-        Button:
-            text: 'Masuk ke Produk'
-            size_hint_y: 0.2
-            on_press: app.root.current = 'produk'
-
-<ProdukScreen>:
-    name: 'produk'
 
     BoxLayout:
         orientation: 'vertical'
 
-        # HEADER
+        # ===== BACKGROUND =====
+        canvas.before:
+            Color:
+                rgba: 0.95,0.95,0.95,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # ===== HEADER =====
         BoxLayout:
             size_hint_y: None
             height: dp(80)
@@ -170,11 +176,11 @@ ScreenManager:
                     size: self.size
 
             Label:
-                text: 'Vecta Kasir'
+                text: 'VECTA KASIR'
                 color: 1,1,1,1
                 font_size: '18sp'
 
-        # GRID PRODUK
+        # ===== GRID PRODUK =====
         ScrollView:
             GridLayout:
                 id: produk_list
@@ -184,27 +190,43 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
 
-        # TOTAL
-        Label:
-            id: total_label
-            text: 'Total: Rp 0'
-            size_hint_y: None
-            height: dp(50)
-
-        # NAVBAR
+        # ===== TOTAL + BAYAR =====
         BoxLayout:
             size_hint_y: None
-            height: dp(60)
+            height: dp(70)
+            padding: dp(10)
+            spacing: dp(10)
+
+            canvas.before:
+                Color:
+                    rgba: 1,1,1,1
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [20]
+
+            Label:
+                id: total_label
+                text: 'Total: Rp 0'
 
             Button:
-                text: 'Home'
-                on_press: app.root.current = 'home'
+                text: 'Bayar'
+                size_hint_x: 0.4
+                background_color: 0.1,0.2,0.4,1
+
+        # ===== NAVBAR =====
+        BoxLayout:
+            size_hint_y: None
+            height: dp(70)
+
             Button:
-                text: 'Produk'
+                text: '🏠\\nHome'
             Button:
-                text: 'Kasir'
+                text: '⬛\\nProduk'
             Button:
-                text: 'Laporan'
+                text: '🛒\\nTransaksi'
+            Button:
+                text: '📊\\nLaporan'
 '''
 
 # ================= APP =================
